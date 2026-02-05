@@ -210,41 +210,159 @@ function GeneralSettings() {
 }
 
 function CookieSettings() {
-  const mockCookies = [
-    { domain: 'example.com', name: 'session_id', value: 'abc123***', expires: '2024-12-31' },
-    { domain: 'reddit.com', name: 'token', value: 'xyz789***', expires: '2024-11-15' },
-  ]
+  const [cookies, setCookies] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [groupedCookies, setGroupedCookies] = useState<Record<string, any[]>>({})
+
+  useEffect(() => {
+    loadCookies()
+  }, [])
+
+  useEffect(() => {
+    // Group cookies by domain
+    const grouped = cookies.reduce((acc, cookie) => {
+      if (!acc[cookie.domain]) {
+        acc[cookie.domain] = []
+      }
+      acc[cookie.domain].push(cookie)
+      return acc
+    }, {} as Record<string, any[]>)
+    setGroupedCookies(grouped)
+  }, [cookies])
+
+  const loadCookies = async () => {
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const CookieManager = (await import('@/lib/data/cookies')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) return
+
+      const allCookies = await CookieManager.getAllCookies(session.user.id)
+      setCookies(allCookies)
+    } catch (error) {
+      console.error('Failed to load cookies:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleClearAll = async () => {
+    if (!confirm('Are you sure you want to delete all cookies?')) return
+    
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const CookieManager = (await import('@/lib/data/cookies')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) return
+
+      await CookieManager.clearAllCookies(session.user.id)
+      setCookies([])
+    } catch (error) {
+      console.error('Failed to clear cookies:', error)
+    }
+  }
+
+  const handleDeleteCookie = async (cookieId: string) => {
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const CookieManager = (await import('@/lib/data/cookies')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) return
+
+      await CookieManager.deleteCookie(cookieId, session.user.id)
+      setCookies(cookies.filter(c => c.id !== cookieId))
+    } catch (error) {
+      console.error('Failed to delete cookie:', error)
+    }
+  }
+
+  const handleClearDomain = async (domain: string) => {
+    if (!confirm(`Clear all cookies for ${domain}?`)) return
+    
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const CookieManager = (await import('@/lib/data/cookies')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) return
+
+      await CookieManager.clearCookiesForDomain(session.user.id, domain)
+      setCookies(cookies.filter(c => c.domain !== domain))
+    } catch (error) {
+      console.error('Failed to clear domain cookies:', error)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold">Cookie Manager</h2>
-        <button className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">
+        <button 
+          onClick={handleClearAll}
+          className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+        >
           Clear All Cookies
         </button>
       </div>
 
-      <div className="space-y-3">
-        {mockCookies.map((cookie, idx) => (
-          <div key={idx} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono text-cyan-400">{cookie.domain}</span>
-                </div>
-                <div className="text-sm text-slate-400 space-y-1">
-                  <div>Name: <span className="text-white">{cookie.name}</span></div>
-                  <div>Value: <span className="text-white">{cookie.value}</span></div>
-                  <div>Expires: <span className="text-white">{cookie.expires}</span></div>
-                </div>
+      {cookies.length === 0 ? (
+        <p className="text-slate-400 text-center py-8">No cookies stored</p>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(groupedCookies).map(([domain, domainCookies]) => (
+            <div key={domain} className="bg-slate-800/30 rounded-lg p-4 border border-slate-700">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-mono text-cyan-400 text-lg">{domain}</h3>
+                <button
+                  onClick={() => handleClearDomain(domain)}
+                  className="text-sm text-red-400 hover:text-red-300"
+                >
+                  Clear Domain
+                </button>
               </div>
-              <button className="text-red-400 hover:text-red-300 text-sm">
-                Delete
-              </button>
+              <div className="space-y-2">
+                {domainCookies.map((cookie) => (
+                  <div key={cookie.id} className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-slate-400 space-y-1">
+                          <div>Name: <span className="text-white font-medium">{cookie.name}</span></div>
+                          <div className="truncate">Value: <span className="text-white">{cookie.value}</span></div>
+                          {cookie.expires && (
+                            <div>Expires: <span className="text-white">{new Date(cookie.expires).toLocaleString()}</span></div>
+                          )}
+                          <div className="flex gap-2 text-xs">
+                            {cookie.secure && <span className="text-green-400">🔒 Secure</span>}
+                            {cookie.http_only && <span className="text-blue-400">📝 HttpOnly</span>}
+                            {cookie.same_site && <span className="text-purple-400">SameSite: {cookie.same_site}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteCookie(cookie.id)}
+                        className="ml-4 text-red-400 hover:text-red-300 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

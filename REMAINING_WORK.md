@@ -41,8 +41,15 @@
 ### 1. **PROXY FUNCTIONALITY** (Priority: CRITICAL)
 **Status:** Basic implementation, not production-ready
 
+**Implementation Requirements:**
+- **MUST USE:** Scramjet (client-side proxy)
+- **MUST USE:** Wisp protocol (WebSocket-based proxy protocol)
+- **MUST USE:** proxy.py (Python backend proxy server)
+
 **What's Missing:**
-- [ ] Proper web proxy that actually works on real websites
+- [ ] Integrate Scramjet client-side proxy library
+- [ ] Implement Wisp protocol for WebSocket proxying
+- [ ] Set up proxy.py backend server
 - [ ] Support for JavaScript execution
 - [ ] CSS/image proxying and rewriting
 - [ ] WebSocket support for real-time apps
@@ -53,22 +60,14 @@
 
 **Why It's Critical:** The proxy doesn't work on most websites right now. Reddit, Discord, YouTube, etc. will all fail.
 
-**Implementation Options:**
-1. **Service Worker Approach** (Recommended for Vercel):
-   - Use Ultraviolet or similar client-side proxy
-   - Deploy service worker to intercept requests
-   - Rewrite URLs in the browser
-   
-2. **Edge Function Approach**:
-   - Use Vercel Edge Functions
-   - Implement server-side URL rewriting
-   - Handle CORS and headers properly
+**Implementation Plan:**
+1. **Install Scramjet** - Add scramjet npm package
+2. **Set up Wisp protocol** - Configure WebSocket transport
+3. **Deploy proxy.py** - Set up Python backend (Vercel serverless function or separate service)
+4. **Integrate in browser page** - Wire up the proxy to browser interface
+5. **Test on major sites** - Reddit, Discord, YouTube
 
-3. **Third-Party Service**:
-   - Use existing proxy API (e.g., ScraperAPI, Bright Data)
-   - Forward requests through their infrastructure
-
-**Estimated Effort:** 2-4 days for basic working proxy, 1-2 weeks for production-quality with evasion
+**Estimated Effort:** 2-4 days for basic working proxy with Scramjet/Wisp/proxy.py stack
 
 ---
 
