@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Bookmark, Plus, Trash2, Edit2, ExternalLink, Folder, Home } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bookmark, Plus, Trash2, ExternalLink, Folder, Home } from 'lucide-react'
 
 interface BookmarkItem {
   id: string
@@ -12,52 +12,103 @@ interface BookmarkItem {
 }
 
 export default function BookmarksPage() {
-  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([
-    {
-      id: '1',
-      title: 'GitHub',
-      url: 'https://github.com',
-      folder: 'Development',
-      iconUrl: '🐙'
-    },
-    {
-      id: '2',
-      title: 'Stack Overflow',
-      url: 'https://stackoverflow.com',
-      folder: 'Development',
-      iconUrl: '📚'
-    },
-    {
-      id: '3',
-      title: 'Reddit',
-      url: 'https://reddit.com',
-      folder: 'Social',
-      iconUrl: '🤖'
-    },
-  ])
-
+  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [newBookmark, setNewBookmark] = useState({ title: '', url: '', folder: 'default' })
+  const [newBookmark, setNewBookmark] = useState({ title: '', url: '', folder: 'default', iconUrl: '🔖' })
 
-  const folders = [...new Set(bookmarks.map(b => b.folder))]
+  useEffect(() => {
+    loadBookmarksFromDb()
+  }, [])
 
-  const handleAddBookmark = () => {
-    if (newBookmark.title && newBookmark.url) {
-      setBookmarks([...bookmarks, {
-        id: Date.now().toString(),
-        ...newBookmark
-      }])
-      setNewBookmark({ title: '', url: '', folder: 'default' })
-      setShowAddModal(false)
+  const loadBookmarksFromDb = async () => {
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const BookmarkManager = (await import('@/lib/data/bookmarks')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) {
+        window.location.href = '/login'
+        return
+      }
+
+      const data = await BookmarkManager.fetchAllBookmarks(session.user.id)
+      setBookmarks(data.map((b: any) => ({
+        id: b.id,
+        title: b.title,
+        url: b.url,
+        folder: b.folder,
+        iconUrl: b.icon_url || '🔖'
+      })))
+    } catch (error) {
+      console.error('Failed to load bookmarks:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleDelete = (id: string) => {
-    setBookmarks(bookmarks.filter(b => b.id !== id))
+  const folders = [...new Set(bookmarks.map(b => b.folder))]
+
+  const handleAddBookmark = async () => {
+    if (newBookmark.title && newBookmark.url) {
+      try {
+        const DatabaseConnection = (await import('@/lib/auth/connection')).default
+        const BookmarkManager = (await import('@/lib/data/bookmarks')).default
+        
+        const session = await DatabaseConnection.getCurrentSession()
+        if (!session?.user) return
+
+        const added = await BookmarkManager.addBookmark(session.user.id, {
+          title: newBookmark.title,
+          url: newBookmark.url,
+          folder: newBookmark.folder,
+          icon_url: newBookmark.iconUrl
+        })
+
+        setBookmarks([...bookmarks, {
+          id: added.id,
+          title: added.title,
+          url: added.url,
+          folder: added.folder,
+          iconUrl: added.icon_url
+        }])
+        
+        setNewBookmark({ title: '', url: '', folder: 'default', iconUrl: '🔖' })
+        setShowAddModal(false)
+      } catch (error) {
+        console.error('Failed to add bookmark:', error)
+      }
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const BookmarkManager = (await import('@/lib/data/bookmarks')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) return
+
+      await BookmarkManager.removeBookmark(id, session.user.id)
+      setBookmarks(bookmarks.filter(b => b.id !== id))
+    } catch (error) {
+      console.error('Failed to delete bookmark:', error)
+    }
   }
 
   const handleVisit = (url: string) => {
     window.location.href = `/browser?url=${encodeURIComponent(url)}`
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading bookmarks...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -193,6 +244,19 @@ export default function BookmarksPage() {
                   onChange={(e) => setNewBookmark({ ...newBookmark, folder: e.target.value })}
                   placeholder="Development"
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Icon (emoji)
+                </label>
+                <input
+                  type="text"
+                  value={newBookmark.iconUrl}
+                  onChange={(e) => setNewBookmark({ ...newBookmark, iconUrl: e.target.value })}
+                  placeholder="🔖"
+                  maxLength={2}
+                  className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none text-2xl"
                 />
               </div>
               <div className="flex gap-3 pt-4">
