@@ -23,6 +23,20 @@ function BrowserContent() {
 
   const activeTab = tabs.find(t => t.isActive)
 
+  const trackVisit = async (url: string, title?: string) => {
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const HistoryManager = (await import('@/lib/data/history')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) return
+
+      await HistoryManager.trackVisit(session.user.id, url, title)
+    } catch (error) {
+      console.error('Failed to track visit:', error)
+    }
+  }
+
   const createNewTab = () => {
     const newId = Date.now().toString()
     setTabs(prev => [
@@ -73,6 +87,9 @@ function BrowserContent() {
     setAddressBarValue(finalUrl)
     setIsLoading(true)
     setTimeout(() => setIsLoading(false), 1000)
+    
+    // Track the visit
+    trackVisit(finalUrl)
   }
 
   const handleAddressSubmit = (e: React.FormEvent) => {
@@ -204,10 +221,10 @@ function BrowserContent() {
         {activeTab && (
           <iframe
             key={activeTab.id}
-            src={`/api/proxy?url=${encodeURIComponent(activeTab.url)}`}
+            src={`/api/bare?target=${encodeURIComponent(activeTab.url)}`}
             className="w-full h-full border-none"
             title="Proxied Content"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
           />
         )}
       </div>
