@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Parastar
 
-## Getting Started
+Superfast web proxy with military-grade privacy and seamless browsing experience.
 
-First, run the development server:
+## What is This?
+
+Parastar lets you browse any website through a secure proxy layer while maintaining your privacy. Think of it as your personal gateway to the web, with built-in account management, bookmark syncing, and cookie persistence.
+
+## Quick Start
+
+### 1. Get Dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure Your Environment
+
+Copy `.env.example` to `.env.local` and fill in your values:
+
+- Supabase URL and keys (get from supabase.com)
+- Create a random 32-character encryption key
+- Set your app URL
+
+### 3. Launch
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit `localhost:3000` and start browsing.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How It Works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Homepage** → Enter any URL or search term
+**Browser** → Multi-tab interface loads sites through proxy
+**Auth** → Sign up to save bookmarks, history, and settings
+**Persistence** → Everything syncs to your Supabase account
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+```
+Landing Page (/)
+  ↓ user enters URL
+Browser Interface (/browser)
+  ↓ requests proxy
+API Route (/api/proxy)
+  ↓ fetches & rewrites
+Target Website
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The proxy rewrites all URLs so navigation stays within the app.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Database Setup
 
-## Deploy on Vercel
+You need to run the SQL migration in your Supabase project:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Open Supabase dashboard
+2. Go to SQL Editor
+3. Run `supabase/migrations/001_initial_schema.sql`
+4. Tables created: bookmarks, stored_cookies, saved_logins, history, tab_sessions, user_preferences
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## What's Built
+
+✓ Landing page with animated UI
+✓ Login and registration forms
+✓ Browser interface with tabs
+✓ Proxy API that rewrites URLs
+✓ Glassmorphism design system
+✓ Responsive layout
+
+## What's Next
+
+The foundation is ready. These features need implementation:
+
+- Connect Supabase auth to login/register pages
+- Make proxy handle all content types properly
+- Add cookie storage and restoration
+- Build bookmark manager UI
+- Implement saved logins with encryption
+- Add history tracking
+- Create settings panel
+- Tab session restoration
+- Bot detection evasion improvements
+
+## Tech Choices
+
+- **Next.js 14+** with App Router for modern React
+- **TypeScript** for type safety
+- **Tailwind CSS** for styling
+- **Supabase** for auth and database
+- **Framer Motion** for animations
+- **Lucide** for icons
+
+## Deploy to Vercel
+
+```bash
+git push
+```
+
+Then import the repo in Vercel. The `vercel.json` has environment variables pre-configured.
+
+## Notes
+
+This is an educational project demonstrating proxy techniques and full-stack web development. Use responsibly and respect website terms of service.
+
+## File Organization
+
+- `app/page.tsx` - Landing page
+- `app/(auth)/` - Login and registration
+- `app/(proxy)/browser/` - Main browser UI
+- `app/api/proxy/` - Proxy endpoint
+- `app/globals.css` - Custom theme
+- `lib/` - Utilities (future)
+- `components/` - Reusable UI (future)
+
+## Development
+
+Build: `npm run build`
+Lint: `npm run lint`
+Dev: `npm run dev`
+
+The app is fully TypeScript with strict mode enabled.
