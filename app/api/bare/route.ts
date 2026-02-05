@@ -1,61 +1,87 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
-  return processProxyRequest(req)
+  return handleProxyRequest(req)
 }
 
 export async function POST(req: NextRequest) {
-  return processProxyRequest(req)
+  return handleProxyRequest(req)
 }
 
-async function processProxyRequest(req: NextRequest) {
-  const targetUrl = req.nextUrl.searchParams.get('target')
+async function handleProxyRequest(req: NextRequest) {
+  const destinationUrl = req.nextUrl.searchParams.get('target')
   
-  if (!targetUrl) {
-    return NextResponse.json({ error: 'Missing target URL' }, { status: 400 })
+  if (!destinationUrl) {
+    return NextResponse.json({ msg: 'No target specified' }, { status: 400 })
   }
 
   try {
-    const decodedUrl = decodeURIComponent(targetUrl)
+    const decodedDestination = decodeURIComponent(destinationUrl)
     
-    const proxyHeaders: Record<string, string> = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Accept': req.headers.get('accept') || '*/*',
-      'Accept-Language': 'en-US,en;q=0.9',
+    const requestHeaders: HeadersInit = {}
+    
+    // Copy important headers
+    const userAgentHeader = req.headers.get('user-agent')
+    if (userAgentHeader) {
+      requestHeaders['User-Agent'] = userAgentHeader
+    }
+    
+    const acceptHeader = req.headers.get('accept')
+    if (acceptHeader) {
+      requestHeaders['Accept'] = acceptHeader
     }
 
-    const cookieValue = req.headers.get('cookie')
-    if (cookieValue) {
-      proxyHeaders['Cookie'] = cookieValue
-    }
-
-    const fetchConfig: RequestInit = {
+    const requestOptions: RequestInit = {
       method: req.method,
-      headers: proxyHeaders,
+      headers: requestHeaders,
+      redirect: 'follow'
     }
 
-    if (req.method === 'POST' && req.body) {
-      fetchConfig.body = req.body
+    if (req.method === 'POST') {
+      const bodyContent = await req.text()
+      if (bodyContent) {
+        requestOptions.body = bodyContent
+      }
     }
 
-    const targetResponse = await fetch(decodedUrl, fetchConfig)
-    const content = await targetResponse.text()
+    const upstreamResponse = await fetch(decodedDestination, requestOptions)
+    const contentData = await upstreamResponse.arrayBuffer()
     
-    const responseHeaders = new Headers()
-    responseHeaders.set('Access-Control-Allow-Origin', '*')
-    responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    const outgoingHeaders = new Headers()
     
-    const contentType = targetResponse.headers.get('content-type')
-    if (contentType) {
-      responseHeaders.set('Content-Type', contentType)
+    // Copy response headers selectively
+    const contentTypeHeader = upstreamResponse.headers.get('content-type')
+    if (contentTypeHeader) {
+      outgoingHeaders.set('Content-Type', contentTypeHeader)
     }
+    
+    // Enable CORS
+    outgoingHeaders.set('Access-Control-Allow-Origin', '*')
+    outgoingHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    outgoingHeaders.set('Access-Control-Allow-Headers', '*')
 
-    return new NextResponse(content, {
-      status: targetResponse.status,
-      headers: responseHeaders
+    return new NextResponse(contentData, {
+      status: upstreamResponse.status,
+      statusText: upstreamResponse.statusText,
+      headers: outgoingHeaders
     })
-  } catch (err) {
-    console.error('Proxy request failed:', err)
-    return NextResponse.json({ error: 'Request failed' }, { status: 500 })
+  } catch (errorObj) {
+    const errorMessage = errorObj instanceof Error ? errorObj.message : 'Unknown error'
+    console.error('Proxy error:', errorMessage)
+    return NextResponse.json({ 
+      msg: 'Proxy request failed',
+      details: errorMessage 
+    }, { status: 500 })
   }
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+    }
+  })
 }
