@@ -29,12 +29,19 @@ export default function RegisterPage() {
     setIsProcessing(true)
 
     try {
-      // TODO: Implement Supabase registration
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const result = await DatabaseConnection.createUser(emailField, passwordField, {
+        full_name: nameField
+      })
+      
+      if (result.error) {
+        setErrorMsg(result.error.message || 'Registration failed. Please try again.')
+        return
+      }
       
       window.location.href = '/browser'
-    } catch (err) {
-      setErrorMsg('Registration failed. Please try again.')
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Registration failed. Please try again.')
     } finally {
       setIsProcessing(false)
     }

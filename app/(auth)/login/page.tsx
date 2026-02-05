@@ -16,13 +16,17 @@ export default function LoginPage() {
     setIsProcessing(true)
 
     try {
-      // TODO: Implement Supabase authentication
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const result = await DatabaseConnection.authenticateUser(emailField, passwordField)
       
-      // Temporary redirect
+      if (result.error) {
+        setErrorMsg(result.error.message || 'Login failed. Please check credentials.')
+        return
+      }
+      
       window.location.href = '/browser'
-    } catch (err) {
-      setErrorMsg('Login failed. Please check credentials.')
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Login failed. Please check credentials.')
     } finally {
       setIsProcessing(false)
     }

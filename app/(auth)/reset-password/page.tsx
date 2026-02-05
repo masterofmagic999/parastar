@@ -15,11 +15,17 @@ export default function ResetPasswordPage() {
     setIsProcessing(true)
 
     try {
-      // TODO: Implement Supabase password reset
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const result = await DatabaseConnection.resetUserPassword(emailField)
+      
+      if (result.error) {
+        setErrorMsg(result.error.message || 'Failed to send reset email. Please try again.')
+        return
+      }
+      
       setIsSubmitted(true)
-    } catch (err) {
-      setErrorMsg('Failed to send reset email. Please try again.')
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to send reset email. Please try again.')
     } finally {
       setIsProcessing(false)
     }
