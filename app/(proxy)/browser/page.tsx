@@ -20,8 +20,30 @@ function BrowserContent() {
   ])
   const [addressBarValue, setAddressBarValue] = useState(initialUrl)
   const [isLoading, setIsLoading] = useState(false)
+  const [swReady, setSwReady] = useState(false)
 
   const activeTab = tabs.find(t => t.isActive)
+
+  // Initialize Scramjet Service Worker
+  useEffect(() => {
+    const initializeProxy = async () => {
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/'
+          })
+          
+          await navigator.serviceWorker.ready
+          setSwReady(true)
+          console.log('Scramjet service worker registered')
+        } catch (error) {
+          console.error('Service worker registration failed:', error)
+        }
+      }
+    }
+
+    initializeProxy()
+  }, [])
 
   const trackVisit = async (url: string, title?: string) => {
     try {
@@ -209,7 +231,16 @@ function BrowserContent() {
 
       {/* Proxy Content Area */}
       <div className="flex-1 bg-white relative">
-        {isLoading && (
+        {!swReady && (
+          <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-50">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-white">Initializing proxy...</p>
+            </div>
+          </div>
+        )}
+        
+        {isLoading && swReady && (
           <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-50">
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -218,10 +249,10 @@ function BrowserContent() {
           </div>
         )}
         
-        {activeTab && (
+        {activeTab && swReady && (
           <iframe
             key={activeTab.id}
-            src={`/api/bare?target=${encodeURIComponent(activeTab.url)}`}
+            src={`/scramjet/service/${encodeURIComponent(activeTab.url)}`}
             className="w-full h-full border-none"
             title="Proxied Content"
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
