@@ -6,29 +6,24 @@ Superfast web proxy with military-grade privacy and seamless browsing experience
 
 Parastar lets you browse any website through a secure proxy layer while maintaining your privacy. Think of it as your personal gateway to the web, with built-in account management, bookmark syncing, and cookie persistence.
 
-## Quick Start
+## 🚀 Quick Start
 
-### 1. Get Dependencies
+**⚠️ IMPORTANT:** Before running the app, you MUST set up Supabase.
 
-```bash
-npm install
-```
+### Follow the complete setup guide:
 
-### 2. Configure Your Environment
+👉 **[SETUP.md](SETUP.md)** 👈
 
-Copy `.env.example` to `.env.local` and fill in your values:
+The setup guide walks you through:
+1. Installing dependencies
+2. Creating a Supabase project
+3. Running the database migration
+4. Getting your API keys
+5. Configuring environment variables
+6. Running the app
+7. Deploying to Vercel
 
-- Supabase URL and keys (get from supabase.com)
-- Create a random 32-character encryption key
-- Set your app URL
-
-### 3. Launch
-
-```bash
-npm run dev
-```
-
-Visit `localhost:3000` and start browsing.
+**Don't skip the Supabase setup!** The app needs a database to function.
 
 ## How It Works
 

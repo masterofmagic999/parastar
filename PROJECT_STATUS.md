@@ -4,6 +4,21 @@
 **Build Status:** ✅ Passing
 **Deployment Ready:** Yes (Vercel config complete)
 
+## ⚠️ BEFORE YOU START
+
+**YOU MUST SET UP SUPABASE FIRST!**
+
+This app requires a Supabase database to function. Follow these steps:
+
+1. Read **[SETUP.md](SETUP.md)** - Complete setup guide
+2. Create a Supabase project (free tier)
+3. Run the database migration
+4. Configure your environment variables
+
+**Do not skip this!** The app will not work without Supabase.
+
+---
+
 ## Implementation Summary
 
 ### What's Built (85% UI Complete)
