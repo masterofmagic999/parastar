@@ -11,9 +11,11 @@
   "dependencies": {
     "@mercuryworkshop/bare-mux": "^2.1.8",
     "@mercuryworkshop/epoxy-transport": "^3.0.1",
+    "@mercuryworkshop/libcurl-transport": "^2.0.5",
     "@mercuryworkshop/scramjet": "^1.0.2",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.95.1",
+    "@titaniumnetwork-dev/ultraviolet": "^3.2.10",
     "@tomphttp/bare-server-node": "^2.0.6",
     "axios": "^1.13.4",
     "cheerio": "^1.2.0",
@@ -21,10 +23,13 @@
     "crypto-js": "^4.2.0",
     "framer-motion": "^12.33.0",
     "lucide-react": "^0.563.0",
+    "movement.css": "^1.1.2",
     "next": "16.1.6",
+    "nprogress": "^0.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
