@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Settings as SettingsIcon, Cookie, Shield, History, Bookmark, Key, Home } from 'lucide-react'
+import type { SavedLogin } from '@/lib/data/saved-logins'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general')
@@ -368,10 +369,9 @@ function CookieSettings() {
 }
 
 function LoginSettings() {
-  const [logins, setLogins] = useState<any[]>([])
+  const [logins, setLogins] = useState<SavedLogin[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [masterPassword, setMasterPassword] = useState('')
-  const [showMasterPasswordPrompt, setShowMasterPasswordPrompt] = useState(false)
   const [showAddLogin, setShowAddLogin] = useState(false)
   const [newLogin, setNewLogin] = useState({
     domain: '',
@@ -411,7 +411,7 @@ function LoginSettings() {
     }
 
     if (!masterPassword) {
-      setShowMasterPasswordPrompt(true)
+      alert('Please set a master password to encrypt this login')
       return
     }
 
@@ -626,7 +626,7 @@ function LoginSettings() {
                   )}
                 </div>
                 <button 
-                  onClick={() => handleDeleteLogin(login.id)}
+                  onClick={() => login.id && handleDeleteLogin(login.id)}
                   className="text-red-400 hover:text-red-300 text-sm px-4 py-2 rounded-lg hover:bg-red-500/10 transition-colors"
                 >
                   Remove

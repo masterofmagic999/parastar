@@ -110,7 +110,7 @@ function BrowserContent() {
     const initializeProxy = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js', {
+          await navigator.serviceWorker.register('/sw.js', {
             scope: '/'
           })
           
