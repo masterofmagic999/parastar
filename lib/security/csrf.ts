@@ -5,7 +5,12 @@
 
 import { randomBytes, createHash } from 'crypto'
 
-// Store tokens in memory (in production, use Redis or database)
+// Store tokens in memory
+// ⚠️ PRODUCTION WARNING: This in-memory store will NOT work correctly in:
+//    - Serverless deployments (each invocation has separate memory)
+//    - Multi-instance deployments (each instance has separate memory)
+//    - Horizontal scaling scenarios
+// For production use, replace with Redis, Memcached, or a database-backed store.
 const tokenStore = new Map<string, { token: string; expires: number }>()
 
 // Token expiration time (1 hour)

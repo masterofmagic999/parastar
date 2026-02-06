@@ -7,15 +7,15 @@ const publicPaths = ['/login', '/register', '/reset-password', '/']
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   
-  // Determine environment
+  // Determine environment once
   const environment = process.env.NODE_ENV === 'production' ? 'production' : 'development'
+  const securityHeaders = getAllSecurityHeaders(environment)
   
   // Allow public paths
   if (publicPaths.some(p => path.startsWith(p)) || path.startsWith('/api/auth')) {
     const response = NextResponse.next()
     
-    // Apply security headers even to public paths
-    const securityHeaders = getAllSecurityHeaders(environment)
+    // Apply security headers
     Object.entries(securityHeaders).forEach(([key, value]) => {
       response.headers.set(key, value)
     })
@@ -34,7 +34,6 @@ export async function middleware(request: NextRequest) {
 
   // Apply security headers to authenticated routes
   const response = NextResponse.next()
-  const securityHeaders = getAllSecurityHeaders(environment)
   Object.entries(securityHeaders).forEach(([key, value]) => {
     response.headers.set(key, value)
   })

@@ -16,6 +16,11 @@ class TabSessionManager {
    * Generate a unique session ID
    */
   static generateSessionId(): string {
+    // Use crypto.randomUUID for secure, unique IDs
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return `session_${crypto.randomUUID()}`
+    }
+    // Fallback for environments without randomUUID
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
 

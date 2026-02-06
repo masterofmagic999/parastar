@@ -174,7 +174,7 @@ class SavedLoginsManager {
       id: data.id,
       domain: data.domain,
       username: data.username_field,
-      password: password,
+      password,
       lastUsed: data.last_used,
       createdAt: data.created_at
     }

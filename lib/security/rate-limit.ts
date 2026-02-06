@@ -8,7 +8,12 @@ interface RateLimitEntry {
   resetTime: number
 }
 
-// In-memory store for rate limits (use Redis in production)
+// In-memory store for rate limits
+// ⚠️ PRODUCTION WARNING: This in-memory store will NOT work correctly in:
+//    - Serverless deployments (each invocation has separate memory)
+//    - Multi-instance deployments (each instance has separate memory)
+//    - Horizontal scaling scenarios
+// For production use, replace with Redis, Memcached, or a database-backed store.
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
 // Cleanup interval (every 5 minutes)

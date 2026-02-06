@@ -172,9 +172,8 @@ export function generateNonce(): string {
     crypto.getRandomValues(array)
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
   }
-  // Fallback for Node.js environment
-  return Math.random().toString(36).substring(2, 15) + 
-         Math.random().toString(36).substring(2, 15)
+  // In Node.js environment, throw error rather than weak fallback
+  throw new Error('crypto.getRandomValues not available - cannot generate secure nonce')
 }
 
 /**

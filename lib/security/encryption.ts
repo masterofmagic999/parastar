@@ -18,20 +18,14 @@ function arrayBufferToString(buffer: ArrayBuffer): string {
 // Convert ArrayBuffer to base64 string
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i])
-  }
-  return btoa(binary)
+  // More efficient approach for large buffers
+  return btoa(String.fromCharCode(...bytes))
 }
 
 // Convert base64 string to ArrayBuffer
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i)
-  }
+  const bytes = Uint8Array.from(binary, char => char.charCodeAt(0))
   return bytes.buffer
 }
 
