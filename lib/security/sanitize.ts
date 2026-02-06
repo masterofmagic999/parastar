@@ -207,10 +207,12 @@ export function sanitizeBoolean(value: any): boolean {
 }
 
 /**
- * Strip HTML tags from text
+ * Strip HTML tags from text by escaping them
+ * This is safer than trying to remove tags as it prevents any HTML injection
  */
 export function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '')
+  // Use escapeHtml to convert all HTML entities, making tags harmless
+  return escapeHtml(html)
 }
 
 /**
