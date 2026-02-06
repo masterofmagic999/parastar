@@ -1,7 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit, RateLimitPresets, getRequestIdentifier } from '@/lib/security/rate-limit'
 
 // Custom request forwarder with evasion
 export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const identifier = getRequestIdentifier(request)
+  const rateLimit = checkRateLimit(identifier, RateLimitPresets.API)
+  
+  if (!rateLimit.allowed) {
+    return new NextResponse(
+      JSON.stringify({ error: 'Too many requests' }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString(),
+          'X-RateLimit-Limit': RateLimitPresets.API.maxRequests.toString(),
+          'X-RateLimit-Remaining': rateLimit.remaining.toString()
+        }
+      }
+    )
+  }
+  
   const targetUrl = request.nextUrl.searchParams.get('url')
   
   if (!targetUrl) {
