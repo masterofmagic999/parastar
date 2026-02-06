@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://rrojsddygnumolbdxesu.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_Kd6h3ZQhnL48fzIigniafA_B7TYx9zw"
+  }
+}
