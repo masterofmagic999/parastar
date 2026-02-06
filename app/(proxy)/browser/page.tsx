@@ -23,13 +23,94 @@ function BrowserContent() {
   const [swReady, setSwReady] = useState(false)
 
   const activeTab = tabs.find(t => t.isActive)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+
+  // Load saved tabs on mount
+  useEffect(() => {
+    const loadSavedTabs = async () => {
+      try {
+        const DatabaseConnection = (await import('@/lib/auth/connection')).default
+        const TabSessionManager = (await import('@/lib/data/tab-sessions')).default
+        
+        const session = await DatabaseConnection.getCurrentSession()
+        if (!session?.user) return
+
+        const savedTabs = await TabSessionManager.getLatestSession(session.user.id)
+        
+        if (savedTabs && savedTabs.length > 0) {
+          const restoredTabs = savedTabs.map(st => ({
+            id: st.id || Date.now().toString(),
+            url: st.url,
+            title: st.pageTitle || 'New Tab',
+            isActive: st.isActive
+          }))
+          
+          setTabs(restoredTabs)
+          const activeRestoredTab = restoredTabs.find(t => t.isActive) || restoredTabs[0]
+          setAddressBarValue(activeRestoredTab.url)
+          setSessionId(savedTabs[0].sessionId)
+        }
+      } catch (error) {
+        console.error('Failed to load saved tabs:', error)
+      }
+    }
+
+    loadSavedTabs()
+  }, [])
+
+  // Save tabs periodically and on unload
+  useEffect(() => {
+    const saveTabs = async () => {
+      try {
+        const DatabaseConnection = (await import('@/lib/auth/connection')).default
+        const TabSessionManager = (await import('@/lib/data/tab-sessions')).default
+        
+        const session = await DatabaseConnection.getCurrentSession()
+        if (!session?.user) return
+
+        const tabsToSave = tabs.map(tab => ({
+          url: tab.url,
+          title: tab.title,
+          isActive: tab.isActive
+        }))
+
+        const sid = await TabSessionManager.saveTabs(
+          session.user.id,
+          tabsToSave,
+          sessionId || undefined
+        )
+        
+        if (!sessionId) {
+          setSessionId(sid)
+        }
+      } catch (error) {
+        console.error('Failed to save tabs:', error)
+      }
+    }
+
+    // Save tabs every 30 seconds
+    const interval = setInterval(saveTabs, 30000)
+
+    // Save tabs on page unload
+    const handleUnload = () => {
+      saveTabs()
+    }
+
+    window.addEventListener('beforeunload', handleUnload)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('beforeunload', handleUnload)
+      saveTabs() // Save on unmount
+    }
+  }, [tabs, sessionId])
 
   // Initialize Scramjet Service Worker
   useEffect(() => {
     const initializeProxy = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js', {
+          await navigator.serviceWorker.register('/sw.js', {
             scope: '/'
           })
           

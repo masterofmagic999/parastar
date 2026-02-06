@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Settings as SettingsIcon, Cookie, Shield, History, Bookmark, Key, Home } from 'lucide-react'
+import type { SavedLogin } from '@/lib/data/saved-logins'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general')
@@ -368,38 +369,283 @@ function CookieSettings() {
 }
 
 function LoginSettings() {
-  const mockLogins = [
-    { domain: 'github.com', username: 'user@email.com', lastUsed: '2 days ago' },
-  ]
+  const [logins, setLogins] = useState<SavedLogin[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [masterPassword, setMasterPassword] = useState('')
+  const [showAddLogin, setShowAddLogin] = useState(false)
+  const [newLogin, setNewLogin] = useState({
+    domain: '',
+    username: '',
+    password: ''
+  })
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    loadLogins()
+  }, [])
+
+  const loadLogins = async () => {
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const SavedLoginsManager = (await import('@/lib/data/saved-logins')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) {
+        window.location.href = '/login'
+        return
+      }
+
+      const allLogins = await SavedLoginsManager.getAllLogins(session.user.id)
+      setLogins(allLogins)
+    } catch (error) {
+      console.error('Failed to load logins:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleAddLogin = async () => {
+    if (!newLogin.domain || !newLogin.username || !newLogin.password) {
+      alert('Please fill in all fields')
+      return
+    }
+
+    if (!masterPassword) {
+      alert('Please set a master password to encrypt this login')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const SavedLoginsManager = (await import('@/lib/data/saved-logins')).default
+      const { sanitizeDomain } = await import('@/lib/security/sanitize')
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) return
+
+      const sanitizedDomain = sanitizeDomain(newLogin.domain)
+
+      await SavedLoginsManager.saveLogin(
+        session.user.id,
+        sanitizedDomain,
+        newLogin.username,
+        newLogin.password,
+        masterPassword
+      )
+
+      await loadLogins()
+      setShowAddLogin(false)
+      setNewLogin({ domain: '', username: '', password: '' })
+      alert('Login saved successfully!')
+    } catch (error) {
+      console.error('Failed to save login:', error)
+      alert('Failed to save login. Please check your master password.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteLogin = async (loginId: string) => {
+    if (!confirm('Are you sure you want to delete this login?')) return
+
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const SavedLoginsManager = (await import('@/lib/data/saved-logins')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) return
+
+      await SavedLoginsManager.deleteLogin(loginId, session.user.id)
+      setLogins(logins.filter(l => l.id !== loginId))
+    } catch (error) {
+      console.error('Failed to delete login:', error)
+      alert('Failed to delete login')
+    }
+  }
+
+  const handleClearAll = async () => {
+    if (!confirm('Are you sure you want to delete ALL saved logins? This cannot be undone.')) return
+
+    try {
+      const DatabaseConnection = (await import('@/lib/auth/connection')).default
+      const SavedLoginsManager = (await import('@/lib/data/saved-logins')).default
+      
+      const session = await DatabaseConnection.getCurrentSession()
+      if (!session?.user) return
+
+      await SavedLoginsManager.deleteAllLogins(session.user.id)
+      setLogins([])
+      alert('All logins cleared')
+    } catch (error) {
+      console.error('Failed to clear logins:', error)
+      alert('Failed to clear logins')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">Saved Logins</h2>
-        <button className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">
-          Clear All Logins
-        </button>
+        <div>
+          <h2 className="text-2xl font-bold">Saved Logins</h2>
+          <p className="text-sm text-slate-400 mt-1">Securely encrypted with AES-256</p>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowAddLogin(true)}
+            className="px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 transition-colors"
+          >
+            Add Login
+          </button>
+          {logins.length > 0 && (
+            <button 
+              onClick={handleClearAll}
+              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="space-y-3">
-        {mockLogins.map((login, idx) => (
-          <div key={idx} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-white">{login.domain}</div>
-                <div className="text-sm text-slate-400">
-                  Username: {login.username}
-                </div>
-                <div className="text-xs text-slate-500 mt-1">
-                  Last used: {login.lastUsed}
-                </div>
-              </div>
-              <button className="text-red-400 hover:text-red-300 text-sm">
-                Remove
-              </button>
-            </div>
+      {/* Master Password Info */}
+      {!masterPassword && logins.length > 0 && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+          <p className="text-yellow-400 text-sm">
+            ⚠️ Set a master password to add or manage logins. Your master password encrypts all saved credentials.
+          </p>
+        </div>
+      )}
+
+      {/* Add Login Form */}
+      {showAddLogin && (
+        <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700 space-y-4">
+          <h3 className="text-xl font-semibold mb-4">Add New Login</h3>
+          
+          <div>
+            <label className="block text-sm text-slate-400 mb-2">Domain</label>
+            <input
+              type="text"
+              value={newLogin.domain}
+              onChange={(e) => setNewLogin({ ...newLogin, domain: e.target.value })}
+              placeholder="example.com"
+              className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white"
+            />
           </div>
-        ))}
+
+          <div>
+            <label className="block text-sm text-slate-400 mb-2">Username/Email</label>
+            <input
+              type="text"
+              value={newLogin.username}
+              onChange={(e) => setNewLogin({ ...newLogin, username: e.target.value })}
+              placeholder="user@example.com"
+              className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-slate-400 mb-2">Password</label>
+            <input
+              type="password"
+              value={newLogin.password}
+              onChange={(e) => setNewLogin({ ...newLogin, password: e.target.value })}
+              placeholder="••••••••"
+              className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white"
+            />
+          </div>
+
+          {!masterPassword && (
+            <div>
+              <label className="block text-sm text-slate-400 mb-2">Master Password (for encryption)</label>
+              <input
+                type="password"
+                value={masterPassword}
+                onChange={(e) => setMasterPassword(e.target.value)}
+                placeholder="Create a strong master password"
+                className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                This password encrypts your saved credentials. Remember it - it cannot be recovered!
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={handleAddLogin}
+              disabled={isSaving}
+              className="flex-1 px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50"
+            >
+              {isSaving ? 'Saving...' : 'Save Login'}
+            </button>
+            <button
+              onClick={() => {
+                setShowAddLogin(false)
+                setNewLogin({ domain: '', username: '', password: '' })
+              }}
+              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Logins List */}
+      {logins.length === 0 ? (
+        <div className="text-center py-12">
+          <Key size={48} className="mx-auto mb-4 text-slate-600" />
+          <p className="text-slate-400">No saved logins yet</p>
+          <p className="text-sm text-slate-500 mt-2">
+            Add your first login to securely save website credentials
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {logins.map((login) => (
+            <div key={login.id} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="font-medium text-white text-lg">{login.domain}</div>
+                  <div className="text-sm text-slate-400 mt-1">
+                    Username: <span className="text-white">{login.username}</span>
+                  </div>
+                  {login.lastUsed && (
+                    <div className="text-xs text-slate-500 mt-1">
+                      Last used: {new Date(login.lastUsed).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={() => login.id && handleDeleteLogin(login.id)}
+                  className="text-red-400 hover:text-red-300 text-sm px-4 py-2 rounded-lg hover:bg-red-500/10 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Security Info */}
+      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mt-6">
+        <h4 className="text-blue-400 font-medium mb-2">🔒 Security Information</h4>
+        <ul className="text-sm text-slate-400 space-y-1">
+          <li>• Passwords are encrypted with AES-256-GCM</li>
+          <li>• Master password is never stored or sent to servers</li>
+          <li>• Each encryption uses a unique salt and IV</li>
+          <li>• Logins are stored securely in your database</li>
+        </ul>
       </div>
     </div>
   )
