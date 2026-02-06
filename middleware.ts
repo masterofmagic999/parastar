@@ -1,14 +1,26 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getAllSecurityHeaders } from './lib/security/csp'
 
 const publicPaths = ['/login', '/register', '/reset-password', '/']
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   
+  // Determine environment
+  const environment = process.env.NODE_ENV === 'production' ? 'production' : 'development'
+  
   // Allow public paths
   if (publicPaths.some(p => path.startsWith(p)) || path.startsWith('/api/auth')) {
-    return NextResponse.next()
+    const response = NextResponse.next()
+    
+    // Apply security headers even to public paths
+    const securityHeaders = getAllSecurityHeaders(environment)
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value)
+    })
+    
+    return response
   }
 
   // Check for session cookie
@@ -20,7 +32,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  return NextResponse.next()
+  // Apply security headers to authenticated routes
+  const response = NextResponse.next()
+  const securityHeaders = getAllSecurityHeaders(environment)
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value)
+  })
+
+  return response
 }
 
 export const config = {
