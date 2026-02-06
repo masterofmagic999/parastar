@@ -105,18 +105,44 @@ function BrowserContent() {
     }
   }, [tabs, sessionId])
 
-  // Initialize Scramjet Service Worker
+  // Initialize Scramjet Service Worker with bare-mux and wisp
   useEffect(() => {
     const initializeProxy = async () => {
       if ('serviceWorker' in navigator) {
         try {
-          await navigator.serviceWorker.register('/sw.js', {
-            scope: '/'
+          // Register service worker
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            type: 'classic'
           })
           
+          console.log('Service worker registered:', registration.scope)
+          
+          // Wait for service worker to be ready
           await navigator.serviceWorker.ready
-          setSwReady(true)
-          console.log('Scramjet service worker registered')
+          
+          // Initialize bare-mux with epoxy transport (wisp protocol)
+          try {
+            const { default: BareMuxConnection } = await import('@mercuryworkshop/bare-mux')
+            const { EpoxTransport } = await import('@mercuryworkshop/epoxy-transport')
+            
+            // Connect to bare-mux
+            const connection = new BareMuxConnection('/baremux/worker.js')
+            
+            // Use wisp server (replaces local proxy.py)
+            const wispServer = 'wss://wisp.mercurywork.shop/'
+            
+            // Set epoxy transport with wisp
+            await connection.setTransport(EpoxTransport, [wispServer])
+            
+            console.log('✅ Bare-mux initialized with wisp transport:', wispServer)
+            setSwReady(true)
+          } catch (bareError) {
+            console.error('Failed to initialize bare-mux, trying without it:', bareError)
+            // Service worker can still work without bare-mux
+            setSwReady(true)
+          }
+          
         } catch (error) {
           console.error('Service worker registration failed:', error)
         }
