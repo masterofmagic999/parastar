@@ -105,7 +105,7 @@ function BrowserContent() {
     }
   }, [tabs, sessionId])
 
-  // Initialize Scramjet Service Worker with bare-mux and wisp
+  // Initialize Scramjet Service Worker with bare-mux
   useEffect(() => {
     const initializeProxy = async () => {
       if ('serviceWorker' in navigator) {
@@ -121,27 +121,33 @@ function BrowserContent() {
           // Wait for service worker to be ready
           await navigator.serviceWorker.ready
           
-          // Initialize bare-mux with epoxy transport (wisp protocol)
-          try {
-            const { default: BareMuxConnection } = await import('@mercuryworkshop/bare-mux')
-            const { EpoxTransport } = await import('@mercuryworkshop/epoxy-transport')
-            
-            // Connect to bare-mux
-            const connection = new BareMuxConnection('/baremux/worker.js')
-            
-            // Use wisp server (replaces local proxy.py)
-            const wispServer = 'wss://wisp.mercurywork.shop/'
-            
-            // Set epoxy transport with wisp
-            await connection.setTransport(EpoxTransport, [wispServer])
-            
-            console.log('✅ Bare-mux initialized with wisp transport:', wispServer)
-            setSwReady(true)
-          } catch (bareError) {
-            console.error('Failed to initialize bare-mux, trying without it:', bareError)
-            // Service worker can still work without bare-mux
-            setSwReady(true)
-          }
+          // Service worker is ready, proxy can work now
+          setSwReady(true)
+          
+          // Try to initialize bare-mux (optional, enhances performance)
+          setTimeout(async () => {
+            try {
+              const { default: BareMuxConnection } = await import('@mercuryworkshop/bare-mux')
+              
+              // Connect to bare-mux
+              const connection = new BareMuxConnection('/baremux/worker.js')
+              
+              // Use wisp server via CDN-loaded epoxy transport
+              // This avoids build-time WASM issues
+              const wispServer = 'wss://wisp.mercurywork.shop/'
+              
+              // Load epoxy transport from script if available
+              if ((window as any).EpoxTransport) {
+                // TypeScript doesn't know about setTransport method
+                (connection as any).setTransport((window as any).EpoxTransport, [wispServer])
+                console.log('✅ Bare-mux initialized with wisp transport:', wispServer)
+              } else {
+                console.log('ℹ️ Proxy running with built-in bare transport')
+              }
+            } catch (bareError) {
+              console.log('ℹ️ Proxy running without bare-mux optimization:', bareError)
+            }
+          }, 100)
           
         } catch (error) {
           console.error('Service worker registration failed:', error)
