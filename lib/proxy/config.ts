@@ -134,10 +134,10 @@ export async function initializeBestTransport(): Promise<{
   try {
     const wispServer = await getFastestWispServer();
     const { default: BareMuxConnection } = await import('@mercuryworkshop/bare-mux');
-    const { LibcurlTransport } = await import('@mercuryworkshop/libcurl-transport');
+    const LibcurlTransport = await import('@mercuryworkshop/libcurl-transport');
     
     const connection = new BareMuxConnection('/baremux/worker.js');
-    await connection.setTransport(LibcurlTransport, [wispServer]);
+    await (connection as any).setTransport(LibcurlTransport.default || LibcurlTransport, [wispServer]);
     
     console.log('✅ Initialized libcurl-transport (fastest)');
     return { transport: 'libcurl', server: wispServer };
